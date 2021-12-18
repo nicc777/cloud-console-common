@@ -16,6 +16,9 @@ class TestDataObjectCacheModel(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertIsInstance(result, DataObjectCache)
         self.assertEqual(result.identifier, 'abc')
+        self.assertEqual(result.last_called_timestamp_utc, 0)
+        self.assertIsInstance(result.raw_result, dict)
+        self.assertEqual(len(result.raw_result), 0)
 
     def test_data_object_cache_basic_init_with_null_identified_throws_exception(self):
         self.assertRaises(Exception, lambda:DataObjectCache(identifier=None))
