@@ -1,14 +1,48 @@
 import inspect
 import os
-import logging
+import logging, logging.handlers
 from pathlib import Path
 import traceback
+import random
+
+
+CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+
+def generate_random_str(length: int=4):
+    if length is None:
+        length = 4
+    if not isinstance(length, int):
+        length = 4
+    if length < 1:
+        length = 1
+    if length > 1024:
+        length = 1024
+    s = ''
+    while len(s) < length:
+        s = '{}{}'.format(
+            s,
+            random.choice(CHARS)
+        )
+    return s
+
+
+def generate_unique_run_id():
+    run_id = '{}-{}-{}-{}'.format(
+        generate_random_str(length=8),
+        generate_random_str(length=4),
+        generate_random_str(length=4),
+        generate_random_str(length=12)
+    )
+    return run_id
 
 
 HOME = str(Path.home())
 LOG_DIR = '{}/.cloud_console/logs'.format(HOME)
 LOG_FILE = '{}/common.log'.format(LOG_DIR)
 FILE_LOG_ENABLED = False
+RUN_ID = generate_unique_run_id()
+DEBUG = bool(os.getenv('DEBUG', None))
 
 
 if os.path.exists(LOG_DIR) is False:
@@ -17,6 +51,8 @@ if os.path.exists(LOG_DIR) is False:
         FILE_LOG_ENABLED = True
     except:
         traceback.print_exc()
+else:
+    FILE_LOG_ENABLED = True
 
 
 def get_default_logger():
@@ -28,13 +64,13 @@ def get_default_logger():
 
 
 def get_file_log_handler():
-    ch = logging.FileHandler(filename=LOG_FILE)
-    ch.setLevel(logging.INFO)
-    if os.getenv('DEBUG', None):
-        ch.setLevel(logging.DEBUG)
+    fh = logging.handlers.RotatingFileHandler(LOG_FILE, maxBytes=10485760, backupCount=5)
+    fh.setLevel(logging.INFO)
+    if DEBUG is True:
+        fh.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    ch.setFormatter(formatter)
-    return ch
+    fh.setFormatter(formatter)
+    return fh
 
 
 def get_default_log_handler():
@@ -42,7 +78,7 @@ def get_default_log_handler():
         return get_file_log_handler()
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
-    if os.getenv('DEBUG', None):
+    if DEBUG is True:
         ch.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)
@@ -70,7 +106,8 @@ class Logger:
         if message is not None:
             message = '{}'.format(message)
             if len(stack_data) == 3:
-                message = '[{}:{}:{}] {}'.format(
+                message = '{} [{}:{}:{}] {}'.format(
+                    RUN_ID,
                     stack_data[0],
                     stack_data[1],
                     stack_data[2],
@@ -114,6 +151,8 @@ class Logger:
 
 
 log = Logger()
+log.info(message='*** Logging Initiated - FILE_LOG_ENABLED={}   DEBUG={}'.format(FILE_LOG_ENABLED, DEBUG))
+log.debug(message='DEBUG ENABLED')
 
 
 # EOF
