@@ -5,6 +5,9 @@ from cloud_console_common import log
 
 class DataObjectCache:
     def __init__(self, identifier: str):
+        if basic_string_validation(input_string=identifier)  is False:
+            log.error(message='Invalid Identifier')
+            raise Exception('Invalid identifier')
         self.identifier = identifier
         self.last_called_timestamp_utc = 0
         self.raw_result = dict()
