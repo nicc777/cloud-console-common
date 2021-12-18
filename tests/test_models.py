@@ -58,6 +58,54 @@ class TestDataPointBase(unittest.TestCase):
         self.assertRaises(Exception, lambda:DataPointBase(name='abc', label='x'*33))
         
 
+class TestDataPoint(unittest.TestCase):
+
+    def test_data_point_basic_init_success(self):
+        result = DataPoint(name='abc')
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, DataPointBase)
+        self.assertEqual(result.name, 'abc')
+
+    def test_method_add_child_data_point_basic_success(self):
+        result = DataPoint(name='parent')
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, DataPointBase)
+        self.assertEqual(result.name, 'parent')
+        child = DataPoint(name='child')
+        self.assertIsNotNone(child)
+        self.assertIsInstance(child, DataPointBase)
+        self.assertEqual(child.name, 'child')
+        result.add_child_data_point(data_point=child)
+        children = result.children_data_points
+        self.assertIsNotNone(children)
+        self.assertIsInstance(children, dict)
+        self.assertEqual(len(children), 1)
+        self.assertTrue('child' in children)
+
+    def test_method_add_child_data_point_none_val_do_nothing(self):
+        result = DataPoint(name='parent')
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, DataPointBase)
+        self.assertEqual(result.name, 'parent')
+        result.add_child_data_point(data_point=None)
+        children = result.children_data_points
+        self.assertIsNotNone(children)
+        self.assertIsInstance(children, dict)
+        self.assertEqual(len(children), 0)
+
+    def test_method_add_child_data_point_wrong_type_do_nothing(self):
+        result = DataPoint(name='parent')
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, DataPointBase)
+        self.assertEqual(result.name, 'parent')
+        result.add_child_data_point(data_point=12345)
+        children = result.children_data_points
+        self.assertIsNotNone(children)
+        self.assertIsInstance(children, dict)
+        self.assertEqual(len(children), 0)
+
 
 if __name__ == '__main__':
     unittest.main()
+
+# EOF
