@@ -22,6 +22,40 @@ class TestDataObjectCacheModel(unittest.TestCase):
 
     def test_data_object_cache_basic_init_with_null_identified_throws_exception(self):
         self.assertRaises(Exception, lambda:DataObjectCache(identifier=None))
+
+
+class TestDataPointBase(unittest.TestCase):
+
+    def test_data_point_base_basic_init_success(self):
+        result = DataPointBase(name='abc')
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, DataPointBase)
+        self.assertEqual(result.name, 'abc')
+
+    def test_data_point_base_basic_init_with_null_name_throws_exception(self):
+        self.assertRaises(Exception, lambda:DataPointBase(name=None))
+
+    def test_data_point_base_basic_init_with_invalid_type_name_throws_exception(self):
+        self.assertRaises(Exception, lambda:DataPointBase(name=123))
+
+    def test_data_point_base_basic_init_with_empty_string_name_throws_exception(self):
+        self.assertRaises(Exception, lambda:DataPointBase(name=''))
+
+    def test_data_point_base_with_label_success(self):
+        result = DataPointBase(name='abc', label='xyz')
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, DataPointBase)
+        self.assertEqual(result.name, 'abc')
+        self.assertEqual(result.label, 'xyz')
+
+    def test_data_point_base_basic_init_with_invalid_type_label_throws_exception(self):
+        self.assertRaises(Exception, lambda:DataPointBase(name='abc', label=123))
+
+    def test_data_point_base_basic_init_with_empty_string_label_throws_exception(self):
+        self.assertRaises(Exception, lambda:DataPointBase(name='abc', label=''))
+
+    def test_data_point_base_basic_init_with_to_long_string_label_throws_exception(self):
+        self.assertRaises(Exception, lambda:DataPointBase(name='abc', label='x'*33))
         
 
 
