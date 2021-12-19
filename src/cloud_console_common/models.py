@@ -10,7 +10,7 @@ class DataObjectCache:
             raise Exception('Invalid identifier')
         self.identifier = identifier
         self.last_called_timestamp_utc = 0
-        self.raw_result = dict()
+        self.raw_result = dict()    # FIXME this must actually be a DataPoint and method operations must operate on the datapoint
 
     def update_results(self, results: dict):
         if results is None:
@@ -52,6 +52,26 @@ class DataPoint(DataPointBase):
         self.children_data_points[data_point.name] = data_point
 
 
+class ExtractLogic:
+
+    def __init__(self):
+        pass
+
+    def extract(self, raw_data)->dict:
+        log.warning(message='This method is a dummy method with no implementation logic - create your own')
+        return dict()
+
+
+class RemoteCallLogic:
+
+    def __init__(self, *kwargs):
+        self.args = dict()
+
+    def execute(self)->dict:
+        log.warning(message='This method is a dummy method with no implementation logic - create your own')
+        return dict()
+
+
 class DataPointExtractLogic:
 
     """
@@ -62,16 +82,16 @@ class DataPointExtractLogic:
         self, 
         name: str, 
         data_point: DataPoint,
-        extract_implementation: object,     # Expecting a class with a method called "extract" that takes one named parameter named "raw_data"
-        remote_call_implementation: object, # Expecting a class with a method called "execute" taking no parameters
-        max_cache_lifetime: int=300         # Refresh every so many seconds
+        extract_implementation: object=ExtractLogic(),          # Expecting a class with a method called "extract" that takes one named parameter named "raw_data"
+        remote_call_implementation: object=RemoteCallLogic(),   # Expecting a class with a method called "execute" taking no parameters
+        max_cache_lifetime: int=300                             # Refresh every so many seconds
     ):
         self.name = name
         self._data_point = data_point
-        if not callable(extract_implementation):
-            raise Exception('Extract function must be a valid callable function')
-        if not callable(remote_call_implementation):
-            raise Exception('Remote function must be a valid callable function')
+        if not isinstance(extract_implementation, ExtractLogic):
+            raise Exception('Extract object must implement ExtractLogic')
+        if not isinstance(remote_call_implementation, RemoteCallLogic):
+            raise Exception('Remote object must implement RemoteCallLogic')
         self.extract_implementation = extract_implementation
         self.remote_call_implementation = remote_call_implementation
         self._cache = DataObjectCache(identifier='DataPointExtractLogic_{}'.format(name))
@@ -87,6 +107,7 @@ class DataPointExtractLogic:
                         raw_data=self.remote_call_implementation.execute()
                     )
                 )
+                log.debug(message='_cache.raw_results={}'.format(self._cache.raw_result))
             except:
                 log.error(message='EXCEPTION: {}'.format(traceback.format_exc()))
                 log.warning(message='Failed to refresh data point - using local data state (STALE)')

@@ -105,6 +105,43 @@ class TestDataPoint(unittest.TestCase):
         self.assertEqual(len(children), 0)
 
 
+class MockExtractLogic01(ExtractLogic):
+
+    def extract(self, raw_data)->dict:
+        if 'test' in raw_data:
+            return {'test_found': True}
+        else:
+            return {'test_found': False}
+
+
+class MockRemoteCallLogic(RemoteCallLogic):
+
+    def execute(self)->dict:
+        fake_api_call_results = {'test': 123}
+        return fake_api_call_results
+
+
+class TestDataPointExtractLogic(unittest.TestCase):
+
+    def test_data_point_extract_logic_basic_init_success(self):
+        result = DataPointExtractLogic(
+            name='get_aws_ec2_instances',
+            data_point=DataPoint(name='ec2_instances', label='awc_ec2_instances'),
+            extract_implementation=MockExtractLogic01(),
+            remote_call_implementation=MockRemoteCallLogic()
+        )
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, DataPointExtractLogic)
+        self.assertEqual(result.name, 'get_aws_ec2_instances')
+        data_point_value = result.get_data_point(return_only_value=True)
+        self.assertIsNotNone(data_point_value)
+        self.assertIsInstance(data_point_value, dict)
+        self.assertTrue('test' in data_point_value)
+        self.assertIsInstance(data_point_value['test_found'], bool)
+        self.assertTrue(data_point_value['test_found'])
+
+
+
 if __name__ == '__main__':
     unittest.main()
 
