@@ -17,11 +17,48 @@ class TestDataObjectCacheModel(unittest.TestCase):
         self.assertIsInstance(result, DataObjectCache)
         self.assertEqual(result.identifier, 'abc')
         self.assertEqual(result.last_called_timestamp_utc, 0)
-        self.assertIsInstance(result.raw_result, dict)
-        self.assertEqual(len(result.raw_result), 0)
+        self.assertIsNone(result.data_point)
 
     def test_data_object_cache_basic_init_with_null_identified_throws_exception(self):
         self.assertRaises(Exception, lambda:DataObjectCache(identifier=None))
+
+    def test_data_object_cache_basic_init_update_results_throws_exception(self):
+        result = DataObjectCache(identifier='abc')
+        self.assertRaises(Exception, lambda:result.update_results(results={'test': 123}))
+
+    def test_data_object_cache_basic_init_and_data_point_update(self):
+        result = DataObjectCache(identifier='abc', data_point=DataPoint(name='xys'))
+        result.update_results(results={'test': 123})
+        self.assertIsNotNone(result.data_point)
+        self.assertIsInstance(result.data_point, DataPoint)
+        self.assertIsNotNone(result.data_point.value)
+        self.assertIsInstance(result.data_point.value, dict)
+        self.assertTrue('test' in result.data_point.value)
+        self.assertEqual(result.data_point.value['test'], 123)
+
+    def test_data_object_cache_update_results_with_none_does_nothing(self):
+        data_point = DataPoint(name='xyz')
+        data_point.value = {'test': 999}
+        result = DataObjectCache(identifier='abc', data_point=data_point)
+        result.update_results(results=None)
+        self.assertIsNotNone(result.data_point)
+        self.assertIsInstance(result.data_point, DataPoint)
+        self.assertIsNotNone(result.data_point.value)
+        self.assertIsInstance(result.data_point.value, dict)
+        self.assertTrue('test' in result.data_point.value)
+        self.assertEqual(result.data_point.value['test'], 999)
+
+    def test_data_object_cache_update_results_with_incorrect_type_does_nothing(self):
+        data_point = DataPoint(name='xyz')
+        data_point.value = {'test': 999}
+        result = DataObjectCache(identifier='abc', data_point=data_point)
+        result.update_results(results=123)
+        self.assertIsNotNone(result.data_point)
+        self.assertIsInstance(result.data_point, DataPoint)
+        self.assertIsNotNone(result.data_point.value)
+        self.assertIsInstance(result.data_point.value, dict)
+        self.assertTrue('test' in result.data_point.value)
+        self.assertEqual(result.data_point.value['test'], 999)
 
 
 class TestDataPointBase(unittest.TestCase):
@@ -119,27 +156,6 @@ class MockRemoteCallLogic(RemoteCallLogic):
     def execute(self)->dict:
         fake_api_call_results = {'test': 123}
         return fake_api_call_results
-
-
-class TestDataPointExtractLogic(unittest.TestCase):
-
-    def test_data_point_extract_logic_basic_init_success(self):
-        result = DataPointExtractLogic(
-            name='get_aws_ec2_instances',
-            data_point=DataPoint(name='ec2_instances', label='awc_ec2_instances'),
-            extract_implementation=MockExtractLogic01(),
-            remote_call_implementation=MockRemoteCallLogic()
-        )
-        self.assertIsNotNone(result)
-        self.assertIsInstance(result, DataPointExtractLogic)
-        self.assertEqual(result.name, 'get_aws_ec2_instances')
-        data_point_value = result.get_data_point(return_only_value=True)
-        self.assertIsNotNone(data_point_value)
-        self.assertIsInstance(data_point_value, dict)
-        self.assertTrue('test' in data_point_value)
-        self.assertIsInstance(data_point_value['test_found'], bool)
-        self.assertTrue(data_point_value['test_found'])
-
 
 
 if __name__ == '__main__':
