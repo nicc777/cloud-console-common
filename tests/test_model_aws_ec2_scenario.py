@@ -464,6 +464,13 @@ class MockBoto3Ec2Client:
         }
 
 
+###############################################################################
+###                                                                         ###
+###                    ExtractLogic Implementations                         ###
+###                                                                         ###
+###############################################################################
+
+
 class InstanceStateExtractLogic(ExtractLogic):
 
     def extract(self, raw_data)->dict:
@@ -516,6 +523,28 @@ class InstanceExtractLogic(ExtractLogic):
         return instances
 
 
+###############################################################################
+###                                                                         ###
+###                  RemoteCallLogic Implementations                        ###
+###                                                                         ###
+###############################################################################
+
+
+class Ec2DescribeInstancesRemoteCallLogic(RemoteCallLogic):
+
+    def execute(self)->dict:
+        client = MockBoto3Ec2Client()   # Simulate: client = boto3.client('ec2')
+        return self.extract_logic.extract(
+            raw_data=client.describe_instances()
+        ) 
+
+
+###############################################################################
+###                                                                         ###
+###                     A C T U A L    T E S T S                            ###
+###                                                                         ###
+###############################################################################
+
 class TestExtractLogicClasses(unittest.TestCase):
 
     def setUp(self):
@@ -552,6 +581,19 @@ class TestExtractLogicClasses(unittest.TestCase):
         self.assertEqual(len(data), 2)
         self.assertEqual(data['Code'], 80)
         self.assertEqual(data['Name'], 'stopped')
+
+
+class TestRemoteCallLogic(unittest.TestCase):
+
+    def test_ec2_describe_instances_remote_call_logic(self):
+        c = Ec2DescribeInstancesRemoteCallLogic(extract_logic=InstanceExtractLogic())
+        data = c.execute()
+        self.assertIsNotNone(data)
+        self.assertIsInstance(data, dict)
+        self.assertEqual(len(data), 3)
+        self.assertTrue('i-00000000000000000' in data)
+        self.assertTrue('i-11111111111111111' in data)
+        self.assertTrue('i-22222222222222222' in data)
 
 
 class TestAwsEc2Scenario(unittest.TestCase):
