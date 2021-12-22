@@ -19,14 +19,15 @@ class ExtractLogic:
 
 class RemoteCallLogic:
 
-    def __init__(self, extract_logic: ExtractLogic=ExtractLogic(), *kwargs):
+    def __init__(self, extract_logic: ExtractLogic=ExtractLogic(), base_data: dict=dict(), **kwargs):
         log.debug(message='kwargs={}'.format(kwargs))
         self.extract_logic = extract_logic
-        self.args = dict()
+        self.base_data = base_data
+        self.args = kwargs.items()
 
     def execute(self)->dict:
         log.warning(message='This method is a dummy method with no implementation logic - create your own')
-        return self.extract_logic.extract(raw_data=dict())
+        return self.extract_logic.extract(raw_data=self.base_data)
 
 
 class DataPointBase:
@@ -55,7 +56,7 @@ class DataPointBase:
     def call_remote_api(self):
         return self.remote_call_logic.execute()
 
-    def update_value(self, value=dict()):
+    def update_value(self, value: dict=dict()):
         pass
 
     def update_child_data_point(self, data_point_name: str, value=dict()):
@@ -64,8 +65,20 @@ class DataPointBase:
 
 class DataPoint(DataPointBase):
 
-    def __init__(self, name: str, label: str=None, initial_value: object=None):
-        super().__init__(name=name, label=label, initial_value=initial_value) 
+    def __init__(
+        self, name: str,
+        label: str=None,
+        initial_value: object=None, 
+        extract_logic: ExtractLogic=ExtractLogic(),
+        remote_call_logic: RemoteCallLogic=RemoteCallLogic()
+    ):
+        super().__init__(
+            name=name,
+            label=label,
+            initial_value=initial_value,
+            extract_logic=extract_logic,
+            remote_call_logic=remote_call_logic
+        ) 
 
     def add_child_data_point(self, data_point: DataPointBase):
         if data_point is None:
@@ -76,16 +89,13 @@ class DataPoint(DataPointBase):
             return
         self.children_data_points[data_point.name] = data_point
 
-    def update_value(self, value=None, set_value_for_children: bool=False):
+    def update_value(self, value: dict=dict()):
         log.debug(message='Updated DataPoint named "{}" with value={}'.format(self.name, value))
-        if value is None:
-            self.value = self.extract_logic.extract(
-                raw_data=self.call_remote_api()
-            )
-            if set_value_for_children is True:
-                value = self.value
-        else:
-            self.value = value
+        self.remote_call_logic.base_data = value
+        self.value = self.extract_logic.extract(
+            raw_data=self.call_remote_api()
+        )
+        self.remote_call_logic.base_data = None
         for idx, data_point in self.children_data_points.items():
             log.debug(message='Updating child datapoint "{}"'.format(idx))
             if isinstance(data_point, DataPointBase):
