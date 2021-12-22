@@ -13,8 +13,21 @@ from cloud_console_common.models import *
 
 
 class MockBoto3Ec2Client:
+    """
+        Used for mocking the scenario: 
+        
+            >>> import boto3
+            >>> client = boto3.client('ec2')
+        
+        This class instance will be the object in "client"
+    """
     
     def describe_instances(self)->dict:
+        """
+            Mocking https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_instances
+
+            Returns 3 instances
+        """
         return {
             'Reservations': [
                 {
