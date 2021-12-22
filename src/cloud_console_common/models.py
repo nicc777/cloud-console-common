@@ -24,7 +24,7 @@ class RemoteCallLogic:
         self.extract_logic = extract_logic
         self.args = dict()
 
-    def execute(self):
+    def execute(self)->dict:
         log.warning(message='This method is a dummy method with no implementation logic - create your own')
         return self.extract_logic.extract(raw_data=dict())
 
