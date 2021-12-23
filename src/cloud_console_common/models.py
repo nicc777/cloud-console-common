@@ -1,4 +1,5 @@
 import traceback
+import copy
 from cloud_console_common.utils import *
 from cloud_console_common import log
 
@@ -37,7 +38,6 @@ class DataPointBase:
         name: str, 
         label: str=None, 
         initial_value: object=None, 
-        extract_logic: ExtractLogic=ExtractLogic(),
         remote_call_logic: RemoteCallLogic=RemoteCallLogic()
     ):
         if basic_string_validation(input_string=name) is False:
@@ -50,7 +50,6 @@ class DataPointBase:
             self.label = label
         self.children_data_points = dict()  # Dictionary of DataPointBase with the "name" of each data point as dictionary index
         self.value = initial_value
-        self.extract_logic = extract_logic
         self.remote_call_logic = remote_call_logic
 
     def call_remote_api(self):
@@ -69,14 +68,12 @@ class DataPoint(DataPointBase):
         self, name: str,
         label: str=None,
         initial_value: object=None, 
-        extract_logic: ExtractLogic=ExtractLogic(),
         remote_call_logic: RemoteCallLogic=RemoteCallLogic()
     ):
         super().__init__(
             name=name,
             label=label,
             initial_value=initial_value,
-            extract_logic=extract_logic,
             remote_call_logic=remote_call_logic
         ) 
 
@@ -92,17 +89,16 @@ class DataPoint(DataPointBase):
     def update_value(self, value: dict=dict()):
         log.debug(message='Updated DataPoint named "{}" with value={}'.format(self.name, value))
         self.remote_call_logic.base_data = value
-        self.value = self.extract_logic.extract(
-            raw_data=self.call_remote_api()
-        )
+        self.value = self.call_remote_api()
         self.remote_call_logic.base_data = None
-        for idx, data_point in self.children_data_points.items():
+        for idx, data_point in  self.children_data_points.items():
             log.debug(message='Updating child datapoint "{}"'.format(idx))
-            if isinstance(data_point, DataPointBase):
-                data_point.update_value(value=value)
+            self.update_child_data_point(data_point_name=idx, value=value)
 
     def update_child_data_point(self, data_point_name: str, value=dict()):
-        if data_point_name in self.children_data_points:
+        if data_point_name not in self.children_data_points:
+            return
+        if isinstance(self.children_data_points[data_point_name], DataPointBase):
             self.children_data_points[data_point_name].update_value(value=value)
 
 

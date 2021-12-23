@@ -512,7 +512,7 @@ class InstanceNameExtractLogic(ExtractLogic):
         return name_data
 
 
-class InstanceExtractLogic(ExtractLogic):
+class InstancesExtractLogic(ExtractLogic):
 
     def extract(self, raw_data)->dict:
         # Expecting the raw response from the AWS EC2 API call "describe-instances"  - Reservations[].Instances[].raw_data
@@ -521,6 +521,12 @@ class InstanceExtractLogic(ExtractLogic):
             for instance in reservation['Instances']:
                 instances[instance['InstanceId']] = copy.deepcopy(instance)
         return instances
+
+
+class SingleInstanceExtractLogic(ExtractLogic):
+
+    def extract(self, raw_data)->dict:
+        return copy.deepcopy(raw_data)
 
 
 ###############################################################################
@@ -534,9 +540,38 @@ class Ec2DescribeInstancesRemoteCallLogic(RemoteCallLogic):
 
     def execute(self)->dict:
         client = MockBoto3Ec2Client()   # Simulate: client = boto3.client('ec2')
-        return self.extract_logic.extract(
-            raw_data=client.describe_instances()
-        ) 
+        response = client.describe_instances()
+        instances = self.extract_logic.extract(raw_data=response) 
+        self.base_data = copy.deepcopy(instances)
+        return instances
+
+
+class Ec2MetaDataRemoteCallLogic(RemoteCallLogic):
+
+    def execute(self)->dict:
+        """
+            Expected Call Origin: 
+
+                DataPoint.update_value(value=instance_data)
+
+            In DataPoint.update_value the RemoteCallLogic.base_data will be set with the data of a single instance 
+            slice from boto3.describe_instances
+
+            This remote call therefore does not need to do another remote call but rather just react on existing data, 
+            which in this case will be the copy of instance data from teh original call.
+        """
+        instance_meta_data = self.extract_logic.extract(raw_data=copy.deepcopy(self.base_data))
+        return instance_meta_data
+
+
+###############################################################################
+###                                                                         ###
+###                      DataPoint Implementations                          ###
+###                                                                         ###
+###############################################################################
+
+
+
 
 
 ###############################################################################
@@ -553,7 +588,7 @@ class TestExtractLogicClasses(unittest.TestCase):
         self.instance_1 = self.root_raw_data['Reservations'][0]['Instances'][0]
 
     def test_instance_extract_logic(self):
-        c = InstanceExtractLogic()
+        c = InstancesExtractLogic()
         data = c.extract(self.root_raw_data)
         self.assertIsNotNone(data)
         self.assertIsInstance(data, dict)
@@ -586,7 +621,7 @@ class TestExtractLogicClasses(unittest.TestCase):
 class TestRemoteCallLogic(unittest.TestCase):
 
     def test_ec2_describe_instances_remote_call_logic(self):
-        c = Ec2DescribeInstancesRemoteCallLogic(extract_logic=InstanceExtractLogic())
+        c = Ec2DescribeInstancesRemoteCallLogic(extract_logic=InstancesExtractLogic())
         data = c.execute()
         self.assertIsNotNone(data)
         self.assertIsInstance(data, dict)
@@ -597,7 +632,41 @@ class TestRemoteCallLogic(unittest.TestCase):
 
 
 class TestAwsEc2Scenario(unittest.TestCase):
-    pass
+    
+    def test_initial_call(self):
+        instances_data_point = DataPoint(
+            name='ec2_instances', 
+            label='EC2 Instances', 
+            initial_value=dict(), 
+            remote_call_logic=Ec2DescribeInstancesRemoteCallLogic(extract_logic=InstancesExtractLogic())
+        )
+        instances_data_point.update_value()
+
+        self.assertIsNotNone(instances_data_point)
+        self.assertIsInstance(instances_data_point, DataPointBase)
+        self.assertIsNotNone(instances_data_point.value)
+        self.assertIsInstance(instances_data_point.value, dict)
+        self.assertEqual(len(instances_data_point.value), 3)
+        
+        for instance_id, instance_data in copy.deepcopy(instances_data_point.value).items():
+            single_instance_data_point = DataPoint(
+                name=instance_id, 
+                label=instance_id, 
+                initial_value=dict(), 
+                remote_call_logic=Ec2MetaDataRemoteCallLogic(extract_logic=SingleInstanceExtractLogic(), InstanceId=instance_id)
+            )
+            single_instance_data_point.update_value(value=instance_data)
+            instances_data_point.add_child_data_point(data_point=single_instance_data_point)
+
+            self.assertIsNotNone(single_instance_data_point, 'Failed test on instance "{}"'.format(instance_id))
+            self.assertIsInstance(single_instance_data_point, DataPointBase, 'Failed test on instance "{}"'.format(instance_id))
+            self.assertIsNotNone(single_instance_data_point.value, 'Failed test on instance "{}"'.format(instance_id))
+            self.assertIsInstance(single_instance_data_point.value, dict, 'Failed test on instance "{}"'.format(instance_id))
+            self.assertTrue(len(single_instance_data_point.value) > 10, 'Failed test on instance "{}"'.format(instance_id))
+
+        self.assertEqual(len(instances_data_point.children_data_points), 3)
+        
+
 
 
 if __name__ == '__main__':
