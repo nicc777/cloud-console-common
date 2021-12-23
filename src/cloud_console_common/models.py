@@ -73,6 +73,14 @@ class DataPointBase:
             return str(self.display_value)
         return '-'
 
+    def __str__(self):
+        return self.get_ui_display_value()
+
+    def __repr__(self):
+        if isinstance(self.value, dict):
+            return 'DataPoint: {}: {}'.format(self.name, self.value)
+        return 'DataPoint: {}: {}'.format(self.name, repr(self.value))
+
 
 class DataPoint(DataPointBase):
 
