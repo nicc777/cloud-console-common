@@ -484,9 +484,11 @@ class InstanceStateExtractLogic(ExtractLogic):
         """
         state = dict()
         state['Code'] = None
-        state['Name'] = 'unknown'
+        state['Name'] = 'Unknown'
         if 'State' in raw_data:
-            state = raw_data['State']
+            state = copy.deepcopy(raw_data['State'])
+            if 'Name' in state:
+                state['Name'] = state['Name'].title()
         return state
 
 
@@ -571,7 +573,25 @@ class Ec2MetaDataRemoteCallLogic(RemoteCallLogic):
 ###############################################################################
 
 
+class InstancesDataPoint(DataPoint):
 
+    def get_ui_display_value(self)->str:
+        return self.label
+
+
+class SingleInstanceDataPoint(DataPoint):
+
+    def get_ui_display_value(self)->str:
+        return self.name
+
+
+class InstanceStateDataPoint(DataPoint):
+
+    def get_ui_display_value(self)->str:
+        return '[{}] {}'.format(
+            self.value['Code'],
+            self.value['Name']
+        )
 
 
 ###############################################################################
@@ -615,7 +635,7 @@ class TestExtractLogicClasses(unittest.TestCase):
         self.assertIsInstance(data, dict)
         self.assertEqual(len(data), 2)
         self.assertEqual(data['Code'], 80)
-        self.assertEqual(data['Name'], 'stopped')
+        self.assertEqual(data['Name'], 'Stopped')
 
 
 class TestRemoteCallLogic(unittest.TestCase):
@@ -634,11 +654,17 @@ class TestRemoteCallLogic(unittest.TestCase):
 class TestAwsEc2Scenario(unittest.TestCase):
     
     def test_initial_call(self):
-        instances_data_point = DataPoint(
+        ###
+        ### Step 1 - Get all instances from the AWS API (Mocked call)
+        ###
+        instances_data_point = InstancesDataPoint(
             name='ec2_instances', 
             label='EC2 Instances', 
             initial_value=dict(), 
-            remote_call_logic=Ec2DescribeInstancesRemoteCallLogic(extract_logic=InstancesExtractLogic())
+            remote_call_logic=Ec2DescribeInstancesRemoteCallLogic(extract_logic=InstancesExtractLogic()),
+            ui_section_name='services',
+            ui_tab_name='Compute',
+            ui_identifier='instances'
         )
         instances_data_point.update_value()
 
@@ -647,13 +673,20 @@ class TestAwsEc2Scenario(unittest.TestCase):
         self.assertIsNotNone(instances_data_point.value)
         self.assertIsInstance(instances_data_point.value, dict)
         self.assertEqual(len(instances_data_point.value), 3)
+        self.assertEqual(instances_data_point.get_ui_display_value(), 'EC2 Instances')
         
+        ###
+        ### Step 2 - Create DataPoint's for each of the retrieved instances and add as children to the instances_data_point
+        ###
         for instance_id, instance_data in copy.deepcopy(instances_data_point.value).items():
-            single_instance_data_point = DataPoint(
+            single_instance_data_point = SingleInstanceDataPoint(
                 name=instance_id, 
                 label=instance_id, 
                 initial_value=dict(), 
-                remote_call_logic=Ec2MetaDataRemoteCallLogic(extract_logic=SingleInstanceExtractLogic(), InstanceId=instance_id)
+                remote_call_logic=Ec2MetaDataRemoteCallLogic(extract_logic=SingleInstanceExtractLogic(), InstanceId=instance_id),
+                ui_section_name='service_items',
+                ui_tab_name='Items',
+                ui_identifier='instance'
             )
             single_instance_data_point.update_value(value=instance_data)
             instances_data_point.add_child_data_point(data_point=single_instance_data_point)
@@ -663,8 +696,44 @@ class TestAwsEc2Scenario(unittest.TestCase):
             self.assertIsNotNone(single_instance_data_point.value, 'Failed test on instance "{}"'.format(instance_id))
             self.assertIsInstance(single_instance_data_point.value, dict, 'Failed test on instance "{}"'.format(instance_id))
             self.assertTrue(len(single_instance_data_point.value) > 10, 'Failed test on instance "{}"'.format(instance_id))
+            self.assertEqual(single_instance_data_point.get_ui_display_value(), instance_id)
 
         self.assertEqual(len(instances_data_point.children_data_points), 3)
+
+        ###
+        ### Step 3 - For each individual instance DataPoint, create a child data point for the instance state
+        ###
+        for data_point_idx, data_point in instances_data_point.children_data_points.items():
+            instance_state_data_point = InstanceStateDataPoint(
+                name='state', 
+                label='State', 
+                initial_value=dict(), 
+                remote_call_logic=Ec2MetaDataRemoteCallLogic(extract_logic=InstanceStateExtractLogic(), InstanceId=instance_id),
+                ui_section_name='service_item_data',
+                ui_tab_name='General',
+                ui_identifier='instance_state'
+            )
+            instance_state_data_point.update_value(value=data_point.value)
+            instances_data_point.children_data_points[data_point_idx].add_child_data_point(data_point=instance_state_data_point)
+
+            self.assertIsNotNone(instance_state_data_point, 'Failed test on data_point "{}"'.format(data_point_idx))
+            self.assertIsInstance(instance_state_data_point, DataPointBase, 'Failed test on data_point "{}"'.format(data_point_idx))
+            self.assertIsNotNone(instance_state_data_point.value, 'Failed test on data_point "{}"'.format(data_point_idx))
+            self.assertIsInstance(instance_state_data_point.value, dict, 'Failed test on data_point "{}"'.format(data_point_idx))
+            self.assertEqual(len(instance_state_data_point.value), 2, 'Failed test on data_point "{}"'.format(data_point_idx))
+
+        # Select an instance for testing
+        children_instance_ids = tuple(instances_data_point.children_data_points.keys())
+        self.assertEqual(len(children_instance_ids), 3)
+        test_instance_data_point = instances_data_point.children_data_points[children_instance_ids[1]]
+        test_instance_state_data_point = test_instance_data_point.children_data_points['state']
+        self.assertIsNotNone(test_instance_state_data_point)
+        self.assertIsInstance(test_instance_state_data_point, DataPointBase)
+        self.assertIsNotNone(test_instance_state_data_point.value)
+        self.assertIsInstance(test_instance_state_data_point.value, dict)
+        self.assertTrue('Code' in test_instance_state_data_point.value)
+        self.assertTrue('Name' in test_instance_state_data_point.value)
+        self.assertEqual(test_instance_state_data_point.get_ui_display_value(), '[80] Stopped')
         
 
 

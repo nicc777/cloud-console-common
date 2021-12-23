@@ -38,7 +38,10 @@ class DataPointBase:
         name: str, 
         label: str=None, 
         initial_value: object=None, 
-        remote_call_logic: RemoteCallLogic=RemoteCallLogic()
+        remote_call_logic: RemoteCallLogic=RemoteCallLogic(),
+        ui_section_name: str='',
+        ui_tab_name: str='',
+        ui_identifier: str=''
     ):
         if basic_string_validation(input_string=name) is False:
             raise Exception('name basic validation failed. must be a string of 1 to 1024 characters')
@@ -50,7 +53,11 @@ class DataPointBase:
             self.label = label
         self.children_data_points = dict()  # Dictionary of DataPointBase with the "name" of each data point as dictionary index
         self.value = initial_value
+        self.display_value = '-'
         self.remote_call_logic = remote_call_logic
+        self.ui_section_name = ui_section_name
+        self.ui_tab_name = ui_tab_name
+        self.ui_identifier = ui_identifier
 
     def call_remote_api(self):
         return self.remote_call_logic.execute()
@@ -61,6 +68,11 @@ class DataPointBase:
     def update_child_data_point(self, data_point_name: str, value=dict()):
         pass
 
+    def get_ui_display_value(self)->str:
+        if self.display_value is not None:
+            return str(self.display_value)
+        return '-'
+
 
 class DataPoint(DataPointBase):
 
@@ -68,13 +80,19 @@ class DataPoint(DataPointBase):
         self, name: str,
         label: str=None,
         initial_value: object=None, 
-        remote_call_logic: RemoteCallLogic=RemoteCallLogic()
+        remote_call_logic: RemoteCallLogic=RemoteCallLogic(),
+        ui_section_name: str='',
+        ui_tab_name: str='',
+        ui_identifier: str=''
     ):
         super().__init__(
             name=name,
             label=label,
             initial_value=initial_value,
-            remote_call_logic=remote_call_logic
+            remote_call_logic=remote_call_logic,
+            ui_section_name=ui_section_name,
+            ui_tab_name=ui_tab_name,
+            ui_identifier=ui_identifier
         ) 
 
     def add_child_data_point(self, data_point: DataPointBase):
