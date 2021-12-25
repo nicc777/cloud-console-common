@@ -526,7 +526,6 @@ class InstancesExtractLogic(ExtractLogic):
 
 
 class SingleInstanceExtractLogic(ExtractLogic):
-
     def extract(self, raw_data)->dict:
         return copy.deepcopy(raw_data)
 

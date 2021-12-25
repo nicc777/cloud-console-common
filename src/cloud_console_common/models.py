@@ -5,11 +5,24 @@ from cloud_console_common import log
 
 
 class ExtractLogic:
+    """Implementation of ExtractLogic that will extract the data from a remote API call
+    """
 
     def __init__(self):
         pass
 
     def extract(self, raw_data)->dict:
+        """Receive the raw data from a remote call. In the case of AWS and the Boto3 library, this should always be a dict.
+
+        .. note:: 
+
+            Typically this method must be customized to suite the needs of the API called
+
+        :param raw_data: The data, usually a dict, returned from a remote API call
+        :type raw_data: dict
+        :return: The extract logic implementation will return the relevant extracted data portion.
+        :rtype: dict
+        """
         log.warning(message='This method is a dummy method with no implementation logic - create your own')
         if raw_data is None:
             return dict()
