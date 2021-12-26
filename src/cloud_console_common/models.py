@@ -140,6 +140,18 @@ class DataPoint(DataPointBase):
         if isinstance(self.children_data_points[data_point_name], DataPointBase):
             self.children_data_points[data_point_name].update_value(value=value)
 
+    def get_child_by_name(self, name: str)->DataPointBase:
+        if name in self.children_data_points:
+            return self.children_data_points[name]
+        raise Exception('Child DataPoint named "{}" not found'.format(name))
+
+    def get_child_by_label(self, label: str)->list:
+        children_data_points = list()
+        for child_data_point_name, child_data_point_obj in self.children_data_points.items():
+            if child_data_point_obj.label == label:
+                children_data_points.append(child_data_point_obj)
+        return children_data_points
+
 
 class DataObjectCache:
     def __init__(self, identifier: str, data_point: DataPoint=None):
