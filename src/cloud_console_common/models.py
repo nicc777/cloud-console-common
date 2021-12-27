@@ -129,10 +129,9 @@ class DataPoint(DataPointBase):
         log.debug(message='Updated DataPoint named "{}" with value={}'.format(self.name, value))
         self.remote_call_logic.base_data = value
         self.value = self.call_remote_api()
-        self.remote_call_logic.base_data = None
         for idx, data_point in  self.children_data_points.items():
             log.debug(message='Updating child datapoint "{}"'.format(idx))
-            self.update_child_data_point(data_point_name=idx, value=value)
+            self.update_child_data_point(data_point_name=idx, value=self.remote_call_logic.base_data)
 
     def update_child_data_point(self, data_point_name: str, value=dict()):
         if data_point_name not in self.children_data_points:
@@ -154,13 +153,14 @@ class DataPoint(DataPointBase):
 
 
 class DataObjectCache:
-    def __init__(self, identifier: str, data_point: DataPoint=None):
+    def __init__(self, identifier: str, data_point: DataPoint=None, max_cache_lifetime: int=300):
         if basic_string_validation(input_string=identifier)  is False:
             log.error(message='Invalid Identifier')
             raise Exception('Invalid identifier')
         self.identifier = identifier
         self.last_called_timestamp_utc = 0
         self.data_point = data_point
+        self.max_cache_lifetime = max_cache_lifetime
 
     def update_results(self, results: dict):
         if self.data_point is None:
@@ -173,11 +173,14 @@ class DataObjectCache:
         self.last_called_timestamp_utc = get_utc_timestamp(with_decimal=False)
         log.info(message='Updated "{}"'.format(self.identifier))
 
-    def refresh_cache(self, force: bool=False):
+    def refresh_cache(self, force: bool=False)->bool:
         now = get_utc_timestamp(with_decimal=False)
-        if ((now - self._cache.last_called_timestamp_utc) > self._max_cache_lifetime) or (force is True):
-            log.info(message='Refreshing local data state - data point "{}"'.format(self._data_point.name))
+        if ((now - self.last_called_timestamp_utc) > self.max_cache_lifetime) or (force is True):
+            log.info(message='Refreshing local data state - data point "{}"'.format(self.data_point.name))
             self.data_point.update_value()
+            self.last_called_timestamp_utc = now
+            return True
+        return False
             
 
 # EOF
