@@ -11,7 +11,7 @@ python -m venv venv
 Install dependencies:
 
 ```shell
-pip3 install python-dateutil coverage rope
+pip3 install python-dateutil coverage rope build
 ```
 
 Run:
@@ -24,4 +24,12 @@ To obttain the current coverage report:
 
 ```shell
 coverage report -m
+```
+
+# Build
+
+Run the following for a build:
+
+```shell
+python3 -m build
 ```
