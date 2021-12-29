@@ -11,7 +11,7 @@ python -m venv venv
 Install dependencies:
 
 ```shell
-pip3 install python-dateutil coverage rope build
+pip3 install python-dateutil coverage rope build pyyaml
 ```
 
 Run:
