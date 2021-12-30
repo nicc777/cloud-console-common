@@ -33,3 +33,25 @@ Run the following for a build:
 ```shell
 python3 -m build
 ```
+
+# Main Configuration File Format
+
+The file structure format is in YAML
+
+Basic structure:
+
+```yaml
+---
+plugin_dir: string                  # Where plugin packages will be installed - $HOME/.cloud_console/plugins
+plugins:
+- plugin_name_as_string:            # A user friendly name of the plugin
+    plugin_package_name: string     # The name of the package, i.e. MyPackage
+    plugin_package_source: string   # URL to the tar.gz package file (local file or on the web)
+    plugin_services:
+    - string                        # Path to Service class, for example MyPackage.ServiceA
+    - string                        # Path to Service class, for example MyPackage.ServiceB
+    plugin_auth: string             # Path to implementation of Auth class, for example MyPackage.MyAuth
+    plugin_auth_config:             # Optional custom configuration for Authentication
+    - name1: string                 # Custom key/value pair
+    - name2: string                 # Custom key/value pair
+```
