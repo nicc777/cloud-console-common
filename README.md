@@ -48,8 +48,12 @@ plugins:
     plugin_package_name: string     # The name of the package, i.e. MyPackage
     plugin_package_source: string   # URL to the tar.gz package file (local file or on the web)
     plugin_services:
-    - string                        # Path to Service class, for example MyPackage.ServiceA
-    - string                        # Path to Service class, for example MyPackage.ServiceB
+    - string1:                      # NAME 1
+        module_name: string         # The module name
+        class_name: string          # The class name (extending Service)
+    - string2:                      # NAME 2
+        module_name: string         # The module name
+        class_name: string          # The class name (extending Service)
     plugin_auth: string             # Path to implementation of Auth class, for example MyPackage.MyAuth
     plugin_auth_config:             # Optional custom configuration for Authentication
     - name1: string                 # Custom key/value pair
