@@ -4,6 +4,7 @@ import logging, logging.handlers
 from pathlib import Path
 import traceback
 import random
+import yaml
 
 
 CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -38,12 +39,31 @@ def generate_unique_run_id():
 
 
 HOME = str(Path.home())
-LOG_DIR = '{}/.cloud_console/logs'.format(HOME)
+PROJECT_DIR = '{}/.cloud_console'.format(HOME)
+PLUGINS_DIR = '{}/plugins'.format(PROJECT_DIR)
+LOG_DIR = '{}/logs'.format(PROJECT_DIR)
 LOG_FILE = '{}/common.log'.format(LOG_DIR)
 FILE_LOG_ENABLED = False
 RUN_ID = generate_unique_run_id()
 DEBUG = bool(os.getenv('DEBUG', None))
+CONFIGURATION_FILE = '{}/configuration.yaml'.format(PROJECT_DIR)
 
+
+def create_basic_configuration():
+    conf = dict()
+    conf['plugin_dir'] = PLUGINS_DIR
+    with open(CONFIGURATION_FILE, 'w') as file:
+        yaml.dump(conf, file)
+
+
+if os.path.exists(PROJECT_DIR) is False:
+    os.makedirs(PROJECT_DIR, exist_ok=True) # If this throws an exception, we want to exit...
+
+if os.path.exists(PLUGINS_DIR) is False:
+    os.makedirs(PLUGINS_DIR, exist_ok=True) # If this throws an exception, we want to exit...
+
+if os.path.exists(CONFIGURATION_FILE) is False:
+    create_basic_configuration()
 
 if os.path.exists(LOG_DIR) is False:
     try:

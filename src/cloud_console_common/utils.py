@@ -1,4 +1,7 @@
 from datetime import datetime
+import traceback
+from cloud_console_common import log
+import yaml
 
 def get_utc_timestamp(with_decimal: bool=False): 
     epoch = datetime(1970,1,1,0,0,0) 
@@ -29,3 +32,19 @@ def basic_string_validation(
         if len(input_string) > max_len:
             return False
     return True
+
+
+def read_yaml_file(file_path: str)->dict:
+    data = dict()
+    try:
+        with open(file_path, 'r') as file:
+            data = yaml.safe_load(file)
+        if data is None:
+            log.warning(message='Returned data object was None - converting to empty dict')
+            data = dict()
+        if not isinstance(data, dict):
+            log.warning(message='Returned data object was not a dict - converting to empty dict')
+            data = dict()
+    except:
+        log.error(message='EXCEPTION: {}'.format(traceback.format_exc()))
+    return data

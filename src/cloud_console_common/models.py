@@ -39,7 +39,7 @@ class RemoteCallLogic:
         self.base_data = base_data
         self.args = kwargs.items()
 
-    def execute(self)->dict:
+    def execute(self, authenticated_client: object=None)->dict:
         log.warning(message='This method is a dummy method with no implementation logic - create your own')
         return self.extract_logic.extract(raw_data=self.base_data)
 
@@ -72,8 +72,8 @@ class DataPointBase:
         self.ui_tab_name = ui_tab_name
         self.ui_identifier = ui_identifier
 
-    def call_remote_api(self):
-        return self.remote_call_logic.execute()
+    def call_remote_api(self, authenticated_client: object=None):
+        return self.remote_call_logic.execute(authenticated_client=authenticated_client)
 
     def update_value(self, value: dict=dict()):
         pass
@@ -125,19 +125,19 @@ class DataPoint(DataPointBase):
             return
         self.children_data_points[data_point.name] = data_point
 
-    def update_value(self, value: dict=dict()):
+    def update_value(self, value: dict=dict(), authenticated_client: object=None):
         log.debug(message='Updated DataPoint named "{}" with value={}'.format(self.name, value))
         self.remote_call_logic.base_data = value
-        self.value = self.call_remote_api()
+        self.value = self.call_remote_api(authenticated_client=authenticated_client)
         for idx, data_point in  self.children_data_points.items():
             log.debug(message='Updating child datapoint "{}"'.format(idx))
             self.update_child_data_point(data_point_name=idx, value=self.remote_call_logic.base_data)
 
-    def update_child_data_point(self, data_point_name: str, value=dict()):
+    def update_child_data_point(self, data_point_name: str, value=dict(), authenticated_client: object=None):
         if data_point_name not in self.children_data_points:
             return
         if isinstance(self.children_data_points[data_point_name], DataPointBase):
-            self.children_data_points[data_point_name].update_value(value=value)
+            self.children_data_points[data_point_name].update_value(value=value, authenticated_client=authenticated_client)
 
     def get_child_by_name(self, name: str)->DataPointBase:
         if name in self.children_data_points:
@@ -162,22 +162,22 @@ class DataObjectCache:
         self.data_point = data_point
         self.max_cache_lifetime = max_cache_lifetime
 
-    def update_results(self, results: dict):
+    def update_results(self, results: dict, authenticated_client: object=None):
         if self.data_point is None:
             raise Exception('data point not yet initialized')
         if results is None:
             return
         if not isinstance(results, dict):
             return 
-        self.data_point.update_value(value=results)
+        self.data_point.update_value(value=results, authenticated_client=authenticated_client)
         self.last_called_timestamp_utc = get_utc_timestamp(with_decimal=False)
         log.info(message='Updated "{}"'.format(self.identifier))
 
-    def refresh_cache(self, force: bool=False)->bool:
+    def refresh_cache(self, force: bool=False, authenticated_client: object=None)->bool:
         now = get_utc_timestamp(with_decimal=False)
         if ((now - self.last_called_timestamp_utc) > self.max_cache_lifetime) or (force is True):
             log.info(message='Refreshing local data state - data point "{}"'.format(self.data_point.name))
-            self.data_point.update_value()
+            self.data_point.update_value(authenticated_client=authenticated_client)
             self.last_called_timestamp_utc = now
             return True
         return False
